@@ -243,7 +243,7 @@ VL53L1X_ERROR VL53L1X_SensorInit(uint16_t dev)
 		}
 			
 	}
-	Status_Check("writing configuration", status);
+	//Status_Check("writing configuration", status);
 	
 	status = VL53L1X_StartRanging(dev);
 
@@ -255,7 +255,7 @@ VL53L1X_ERROR VL53L1X_SensorInit(uint16_t dev)
 //			Status_Check("CheckForDataReady", status);
 		
 	}
-	UART_printf("check for data ready done.\r\n");
+	//UART_printf("check for data ready done.\r\n");
 
 	
 	status = VL53L1X_ClearInterrupt(dev);

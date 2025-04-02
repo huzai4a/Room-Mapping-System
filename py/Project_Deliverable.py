@@ -1,69 +1,3 @@
-"""
-
-#Modify the following line with your own serial port details
-#   Currently set COM3 as serial port at 115.2kbps 8N1
-#   Refer to PySerial API for other options.  One option to consider is
-#   the "timeout" - allowing the program to proceed if after a defined
-#   timeout period.  The default = 0, which means wait forever.
-
-import serial
-import open3d as o3d
-import numpy as np
-
-
-xyz_points = np.array([
-    [0, 0, 0],
-    [10.606, 10.606, 2.598],
-    [10.000, 17.321, 5.177]
-])
-
-pcd = o3d.geometry.PointCloud()
-pcd.points = o3d.utility.Vector3dVector(xyz_points)
-o3d.visualization.draw_geometries([pcd])
-
-
-
-s = serial.Serial('COM5', 115200, timeout = 5)
-
-print("Opening: " + s.name)
-
-# reset the buffers of the UART port to delete the remaining data in the buffers
-s.reset_output_buffer()
-s.reset_input_buffer()
-
-
-
-
-
-
-# wait for user's signal to start the program
-input("Press Enter to start communication...")
-# send the character 's' to MCU via UART
-# This will signal MCU to start the transmission
-s.write('s'.encode())
-
-# recieve 10 measurements from UART of MCU 
-for i in range(20):
-    x = s.readline()
-
-    try:
-        print(int (x.decode()), end=" ")
-        print("integer")
-    except:
-        print((x.decode()))
-       
-# the encode() and decode() function are needed to convert string to bytes
-# because pyserial library functions work with type "bytes"
-
-
-#close the port
-print("Closing: " + s.name)
-s.close()
-"""
-
-
-
-
 import serial
 import math
 import numpy as np
@@ -73,29 +7,31 @@ import time
 # Initialize serial communication
 with serial.Serial('COM5', 115200, timeout=2) as s:
     time.sleep(2)  # Wait for connection
-    s.reset_input_buffer()
-
-    print("Waiting for data...")
+    s.reset_input_buffer()  # Clear in buffer
 
     # Configuration
-    x_increment = 500 #cm between scans
+    x_increment = 50  # cm between scans
     x = 0
     all_points = []
     scan_point_counts = []  # Track points per scan
 
-    for set_num in range(7):  # X scans
-        with open(f"tof_radar_set_{set_num}.xyz", "w") as f:
+    with open("tof_radar_scans.xyz", "w") as f:
+        for set_num in range(5):  # X scans
+            f.write(f"# Set {set_num}\n")  # Identifier for each scan
             angle = 0
             points = []
             point_count = 0  # Count points in current scan
 
-            for _ in range(32):  # 32 measurements per scan
+            while True:  # Keep waiting for valid data
                 try:
                     line = s.readline().decode('ascii').strip()
-                    print(f"Received: {line}")
-
+                    
                     if not line or len(line.split()) != 32:
-                        continue
+                        print("Waiting for valid data...")
+                        time.sleep(0.1)  # Small delay before retrying
+                        continue  # Keep waiting instead of skipping
+
+                    print(f"Received: {line}")
 
                     distances = list(map(float, line.split()))
                     for j, dist in enumerate(distances):
@@ -108,15 +44,21 @@ with serial.Serial('COM5', 115200, timeout=2) as s:
 
                     angle += 11.25
                     f.flush()
+                    break  # Exit while loop once valid data is processed
 
                 except (ValueError, UnicodeDecodeError) as e:
                     print(f"Error: {e}")
-                    continue
+                    time.sleep(0.1)  # Small delay before retrying
 
             all_points.extend(points)
             scan_point_counts.append(point_count)  # Store point count for this scan
             x += x_increment
             print(f"Scan {set_num+1} complete with {point_count} points")
+
+# Debugging
+print(f"Total points: {len(all_points)}")
+print(scan_point_counts)
+print(f"Avg points per scan: {np.mean(scan_point_counts)}")
 
 # Create line connections
 lines = []

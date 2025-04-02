@@ -49,7 +49,7 @@
 /////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////
 
-#define NUM_MEASUREMENTS 8
+#define NUM_MEASUREMENTS 32
 
 // note: for degrees we consider cw positive and ccw negative i.e. homeDeg = -45 -> 45 deg CCW
 double homeDeg = 0; // sets the point at which to return. i.e. 45 means 45 cw from the direction the motor starts
@@ -345,7 +345,7 @@ int main(void) {
 			
 			/* 2 Initialize the sensor with the default setting  */
 			status = VL53L1X_SensorInit(dev);
-			Status_Check("SensorInit", status);
+			//Status_Check("SensorInit", status); DEBUG
 
 			
 			/* 3 Optional functions to be used to change the main ranging parameters according the application requirements to get the best ranging performances */
@@ -389,7 +389,7 @@ int main(void) {
 				strcat(aBuffer, temp); // Append to main buffer
 				
 				
-				SysTick_Wait10ms(10);
+				SysTick_Wait10ms(30);
 				
 				// 45 deg -> 64 (8 measures), 11.25 deg -> 16 (32 measures) 
 				for(int j = 0; j < 512/NUM_MEASUREMENTS; j++) {
