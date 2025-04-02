@@ -4,15 +4,15 @@
 #include "SysTick.h"
 #include "onboardLEDs.h"
 
-#define DELAY 1
+#define DELAY 50
 
 //Flash D1, PN1
 void FlashLED1(int count) {
 		while(count--) {
 			GPIO_PORTN_DATA_R ^= 0b00000010; 								//hello world!
-			SysTick_Wait10ms(DELAY);														//.05s delay
+			SysTick_Wait10us(DELAY);														//.05s delay
 			GPIO_PORTN_DATA_R ^= 0b00000010;			
-			SysTick_Wait10ms(DELAY);														//.05s delay
+			SysTick_Wait10us(DELAY);														//.05s delay
 		}
 }
 
@@ -20,9 +20,9 @@ void FlashLED1(int count) {
 void FlashLED2(int count) {
 		while(count--) {
 			GPIO_PORTN_DATA_R ^= 0b00000001; 								//hello world!
-			SysTick_Wait10ms(DELAY);														//.05s delay
+			SysTick_Wait10us(DELAY);														//.05s delay
 			GPIO_PORTN_DATA_R ^= 0b00000001;			
-			SysTick_Wait10ms(DELAY);														//.05s delay			
+			SysTick_Wait10us(DELAY);														//.05s delay			
 		}
 }
 
@@ -30,9 +30,9 @@ void FlashLED2(int count) {
 void FlashLED3(int count) {
 		while(count--) {
 			GPIO_PORTF_DATA_R ^= 0b00010000; 								//hello world!
-			SysTick_Wait10ms(DELAY);														//.05s delay
+			SysTick_Wait10us(DELAY);														//.05s delay
 			GPIO_PORTF_DATA_R ^= 0b00010000;			
-			SysTick_Wait10ms(DELAY);														//.05s delay			
+			SysTick_Wait10us(DELAY);														//.05s delay			
 		}
 }
 
@@ -40,19 +40,19 @@ void FlashLED3(int count) {
 void FlashLED4(int count) {
 		while(count--) {
 			GPIO_PORTF_DATA_R ^= 0b00000001; 								//hello world!
-			SysTick_Wait10ms(DELAY);														//.05s delay
+			SysTick_Wait10us(DELAY);														//.05s delay
 			GPIO_PORTF_DATA_R ^= 0b00000001;			
-			SysTick_Wait10ms(DELAY);														//.05s delay			
+			SysTick_Wait10us(DELAY);														//.05s delay			
 		}
 }
 
 void FlashAllLEDs(){
 		GPIO_PORTN_DATA_R ^= 0b00000011; 								//hello world!
 		GPIO_PORTF_DATA_R ^= 0b00010001; 								//hello world!	
-		SysTick_Wait10ms(25);														//.25s delay
+		SysTick_Wait10us(25);														//.25s delay
 		GPIO_PORTN_DATA_R ^= 0b00000011;			
 		GPIO_PORTF_DATA_R ^= 0b00010001; 								//goodbye world!	
-		SysTick_Wait10ms(25);														//.25s delay			
+		SysTick_Wait10us(25);														//.25s delay			
 }
 
 void FlashI2CTx(){

@@ -52,6 +52,7 @@
 #define NUM_MEASUREMENTS 32
 
 // note: for degrees we consider cw positive and ccw negative i.e. homeDeg = -45 -> 45 deg CCW
+//home should be 0, or the ToF wires will get tangled
 double homeDeg = 0; // sets the point at which to return. i.e. 45 means 45 cw from the direction the motor starts
 double currDeg = 0; //variable to store our relative position to the starting point
 uint16_t	dev = 0x29;			//address of the ToF sensor as an I2C slave peripheral
@@ -86,6 +87,18 @@ void I2C_Init(void){
     I2C0_MTPR_R = 0b0000000000000101000000000111011;                       	// 8) configure for 100 kbps clock (added 8 clocks of glitch suppression ~50ns)
 //    I2C0_MTPR_R = 0x3B;                                        						// 8) configure for 100 kbps clock
         
+}
+
+//XSHUT     This pin is an active-low shutdown input; 
+//					the board pulls it up to VDD to enable the sensor by default. 
+//					Driving this pin low puts the sensor into hardware standby. This input is not level-shifted.
+void VL53L1X_XSHUT(void){
+    GPIO_PORTG_DIR_R |= 0x01;                                        // make PG0 out
+    GPIO_PORTG_DATA_R &= 0b11111110;                                 //PG0 = 0
+    FlashAllLEDs();
+    SysTick_Wait10ms(10);
+    GPIO_PORTG_DIR_R &= ~0x01;                                            // make PG0 input (HiZ)
+    
 }
 
 //The VL53L1X needs to be reset using XSHUT.  We will use PG0
@@ -260,19 +273,36 @@ void motorIteration(int direction){
 		SysTick_Wait10ms(delay);
 	}
 }
+
+int roundUp(double num) {
+    int intPart = (int)num;  // Get the integer part of the dbl
+    return (num > intPart) ? (intPart + 1) : intPart; // return the rounded up version
+}
 	
-
-
-//XSHUT     This pin is an active-low shutdown input; 
-//					the board pulls it up to VDD to enable the sensor by default. 
-//					Driving this pin low puts the sensor into hardware standby. This input is not level-shifted.
-void VL53L1X_XSHUT(void){
-    GPIO_PORTG_DIR_R |= 0x01;                                        // make PG0 out
-    GPIO_PORTG_DATA_R &= 0b11111110;                                 //PG0 = 0
-    FlashAllLEDs();
-    SysTick_Wait10ms(10);
-    GPIO_PORTG_DIR_R &= ~0x01;                                            // make PG0 input (HiZ)
-    
+void returnHome (){
+	int numIterations;
+	//make sure to turn off angle status led (LED2) just in case return is pressed as the led blinks
+	GPIO_PORTF_DATA_R &= ~0x10;
+	//how far we need to travel home (must be +ve)
+	double degDiff = currDeg - homeDeg;
+	degDiff = degDiff < 0 ? degDiff*-1 : degDiff;
+	
+	if (degDiff >= 360 || degDiff <= 0){ // prevents tangling of ToF
+		numIterations = 512; // full rotation
+	} else {
+		// home may not be possible to achieve due to the step size not matching up exactly,
+		// meaning that an extra 0.703125 iteration may be taken
+		degDiff = degDiff/0.703125;
+		numIterations = roundUp(degDiff); 
+	}
+	
+	// you need to go CCW
+	//move ccw til home
+	for(int i = 0; i < numIterations; i++){												
+		motorIteration(1);
+	}
+	
+	currDeg = homeDeg;
 }
 
 
@@ -322,8 +352,15 @@ int main(void) {
 			UART_printf(aBuffer);
 			//empty the buffer for the next runthrough
 			memset(aBuffer, 0, sizeof(aBuffer));
-			
-			FlashLED1(1); // transmission indicator
+			/*
+			NOTE: if i need to change this so its actually starting and stopping acquisition
+			all i need to do is make a boolean of isAcquiring for the sprintf concat lines, 
+			while also making sure to count the number of steps, sending the uart when the count gets to 32
+			*/
+			toggleLED(0);
+			SysTick_Wait10ms(1);
+			toggleLED(0);
+			//FlashLED1(1); // transmission indicator
 			//add transmit
 		}
 		
@@ -338,7 +375,7 @@ int main(void) {
 				status = VL53L1X_BootState(dev, &sensorState);
 				SysTick_Wait10ms(10);
 			}
-			FlashAllLEDs();
+			FlashAllLEDs(); // booted indication, for debugging
 			//UART_printf("ToF Chip Booted!\r\n Please Wait...\r\n");
 			
 			status = VL53L1X_ClearInterrupt(dev); /* clear interrupt has to be called to enable next interrupt*/
@@ -357,7 +394,8 @@ int main(void) {
 			status = VL53L1X_StartRanging(dev);	   // This function has to be called to enable the ranging
 			
 			// Get the Distance Measures 8 times / 32 times
-			for(int i = 0; i < NUM_MEASUREMENTS; i++) {
+			int i = 0;
+			while ((i < NUM_MEASUREMENTS) && (GPIO_PORTJ_DATA_R & 0x02)) {
 				
 				// 5 wait until the ToF sensor's data is ready
 				while (dataReady == 0){
@@ -374,7 +412,10 @@ int main(void) {
 				status = VL53L1X_GetAmbientRate(dev, &AmbientRate);
 				status = VL53L1X_GetSpadNb(dev, &SpadNum);
 				
-				FlashLED2(1); // flash PN0 for measurement status indication
+				toggleLED(1);
+				SysTick_Wait10ms(1);
+				toggleLED(1);
+				//FlashLED2(1); // flash PN0 for measurement status indication
 
 				status = VL53L1X_ClearInterrupt(dev);	 /* 8 clear interrupt has to be called to enable next interrupt*/
 				
@@ -391,25 +432,31 @@ int main(void) {
 				
 				SysTick_Wait10ms(30);
 				
+				int j = 0;
 				// 45 deg -> 64 (8 measures), 11.25 deg -> 16 (32 measures) 
-				for(int j = 0; j < 512/NUM_MEASUREMENTS; j++) {
+				while(j < 512/NUM_MEASUREMENTS && (GPIO_PORTJ_DATA_R & 0x02)) {
 					motorIteration(0);
-					position++;
+					position++;	
+					j++;
+					currDeg += 0.703125; // how much distance was covered in the previous 8 lines of code (CW)
+					if (currDeg >= 360){
+						currDeg -=360;
+					}
 				}
+				
+				i++;
 			}
-			// return home here
-			
+			checkBtnPresses(1,1); // debounces
+			// return home here			
+			returnHome();
+			/*
 			for(int j = 0; j < 64*8; j++) {//512
 					motorIteration(1);
 					position--;
 			}
+			*/
 			
-			VL53L1X_StopRanging(dev);
-			
-			
-			
-			checkBtnPresses(0,1); // debounce (for when stop was pressed)
-				
+			VL53L1X_StopRanging(dev);				
 			running = 0; // finished this run
 		}
 		
