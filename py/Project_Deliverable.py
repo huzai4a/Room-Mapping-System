@@ -10,13 +10,13 @@ with serial.Serial('COM5', 115200, timeout=2) as s:
     s.reset_input_buffer()  # Clear in buffer
 
     # Configuration
-    x_increment = 50  # cm between scans
+    x_increment = 500  # mm between scans
     x = 0
     all_points = []
     scan_point_counts = []  # Track points per scan
 
     with open("tof_radar_scans.xyz", "w") as f:
-        for set_num in range(7):  # X scans
+        for set_num in range(15):  # X scans
             f.write(f"# Set {set_num}\n")  # Identifier for each scan
             angle = 0
             points = []

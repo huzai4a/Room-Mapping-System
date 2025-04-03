@@ -251,26 +251,26 @@ int checkBtnPresses(int btnNum, int debounce){
 
 
 void motorIteration(int direction){
-	int delay = 1; // each wait call is 10ms, making this delay (10*delay) ms, this is global for testing
+	int delay = 200; // each wait call is 10ms, making this delay (10*delay) ms, this is global for testing
 	
 	if (direction == 0){ //CW
 		GPIO_PORTH_DATA_R = 0b0011;
-		SysTick_Wait10ms(delay);											// What if we want to reduce the delay between steps to be less than 10 ms?
+		SysTick_Wait10us(delay);											// What if we want to reduce the delay between steps to be less than 10 ms?
 		GPIO_PORTH_DATA_R = 0b0110;													// Complete the missing code.
-		SysTick_Wait10ms(delay);
+		SysTick_Wait10us(delay);
 		GPIO_PORTH_DATA_R = 0b1100;													// Complete the missing code.
-		SysTick_Wait10ms(delay);
+		SysTick_Wait10us(delay);
 		GPIO_PORTH_DATA_R = 0b1001;													// Complete the missing code.
-		SysTick_Wait10ms(delay);
+		SysTick_Wait10us(delay);
 	} else { //CCW
 		GPIO_PORTH_DATA_R = 0b1001;
-		SysTick_Wait10ms(delay);											// What if we want to reduce the delay between steps to be less than 10 ms?
+		SysTick_Wait10us(delay);											// What if we want to reduce the delay between steps to be less than 10 ms?
 		GPIO_PORTH_DATA_R = 0b1100;													// Complete the missing code.
-		SysTick_Wait10ms(delay);
+		SysTick_Wait10us(delay);
 		GPIO_PORTH_DATA_R = 0b0110;													// Complete the missing code.
-		SysTick_Wait10ms(delay);
+		SysTick_Wait10us(delay);
 		GPIO_PORTH_DATA_R = 0b0011;													// Complete the missing code.
-		SysTick_Wait10ms(delay);
+		SysTick_Wait10us(delay);
 	}
 }
 
@@ -280,9 +280,10 @@ int roundUp(double num) {
 }
 	
 void returnHome (){
+	//return home is being displayed as active for troubleshooting
+	toggleLED(2);
+	
 	int numIterations;
-	//make sure to turn off angle status led (LED2) just in case return is pressed as the led blinks
-	GPIO_PORTF_DATA_R &= ~0x10;
 	//how far we need to travel home (must be +ve)
 	double degDiff = currDeg - homeDeg;
 	degDiff = degDiff < 0 ? degDiff*-1 : degDiff;
@@ -303,6 +304,7 @@ void returnHome (){
 	}
 	
 	currDeg = homeDeg;
+	toggleLED(2);
 }
 
 
@@ -377,14 +379,14 @@ int main(void) {
 			}
 			FlashAllLEDs(); // booted indication, for debugging
 			//UART_printf("ToF Chip Booted!\r\n Please Wait...\r\n");
-			
+
 			status = VL53L1X_ClearInterrupt(dev); /* clear interrupt has to be called to enable next interrupt*/
-			
+
 			/* 2 Initialize the sensor with the default setting  */
 			status = VL53L1X_SensorInit(dev);
 			//Status_Check("SensorInit", status); DEBUG
 
-			
+
 			/* 3 Optional functions to be used to change the main ranging parameters according the application requirements to get the best ranging performances */
 			//  status = VL53L1X_SetDistanceMode(dev, 2); /* 1=short, 2=long */
 			//  status = VL53L1X_SetTimingBudgetInMs(dev, 100); /* in ms possible values [20, 50, 100, 200, 500] */
@@ -392,10 +394,10 @@ int main(void) {
 
 			// 4 What is missing -- refer to API flow chart
 			status = VL53L1X_StartRanging(dev);	   // This function has to be called to enable the ranging
-			
+
 			// Get the Distance Measures 8 times / 32 times
 			int i = 0;
-			while ((i < NUM_MEASUREMENTS) && (GPIO_PORTJ_DATA_R & 0x02)) {
+			while ((i < NUM_MEASUREMENTS) && (GPIO_PORTJ_DATA_R & 0x02) && (GPIO_PORTJ_DATA_R & 0x01)) {
 				
 				// 5 wait until the ToF sensor's data is ready
 				while (dataReady == 0){
@@ -430,11 +432,11 @@ int main(void) {
 				strcat(aBuffer, temp); // Append to main buffer
 				
 				
-				SysTick_Wait10ms(30);
+				SysTick_Wait10ms(20);
 				
 				int j = 0;
 				// 45 deg -> 64 (8 measures), 11.25 deg -> 16 (32 measures) 
-				while(j < 512/NUM_MEASUREMENTS && (GPIO_PORTJ_DATA_R & 0x02)) {
+				while(j < 512/NUM_MEASUREMENTS && (GPIO_PORTJ_DATA_R & 0x02) && (GPIO_PORTJ_DATA_R & 0x01)) {
 					motorIteration(0);
 					position++;	
 					j++;
@@ -446,7 +448,8 @@ int main(void) {
 				
 				i++;
 			}
-			checkBtnPresses(1,1); // debounces
+			// debounces if necessary
+			checkBtnPresses(1,1);
 			// return home here			
 			returnHome();
 			/*

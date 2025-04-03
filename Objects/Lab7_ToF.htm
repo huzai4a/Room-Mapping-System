@@ -3,7 +3,7 @@
 <title>Static Call Graph - [.\Objects\Lab7_ToF.axf]</title></head>
 <body><HR>
 <H1>Static Call Graph for image .\Objects\Lab7_ToF.axf</H1><HR>
-<BR><P>#&#060CALLGRAPH&#062# ARM Linker, 6220000: Last Updated: Wed Apr  2 04:42:01 2025
+<BR><P>#&#060CALLGRAPH&#062# ARM Linker, 6220000: Last Updated: Wed Apr  2 22:09:01 2025
 <BR><P>
 <H3>Maximum Stack Usage =        152 bytes + Unknown(Cycles, Untraceable Function Pointers)</H3><H3>
 Call chain for Maximum Stack Depth:</H3>
@@ -833,13 +833,14 @@ Global Symbols
 <BR><BR>[Stack]<UL><LI>Max Depth = 12<LI>Call Chain = SysTick_Wait10ms
 </UL>
 <BR>[Called By]<UL><LI><a href="#[81]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;main
-<LI><a href="#[ae]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;returnHome
 </UL>
 
 <P><STRONG><a name="[8f]"></a>SysTick_Wait10us</STRONG> (Thumb, 52 bytes, Stack size 4 bytes, systick.o(.text.SysTick_Wait10us))
 <BR><BR>[Stack]<UL><LI>Max Depth = 4<LI>Call Chain = SysTick_Wait10us
 </UL>
-<BR>[Called By]<UL><LI><a href="#[8e]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FlashAllLEDs
+<BR>[Called By]<UL><LI><a href="#[81]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;main
+<LI><a href="#[ae]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;returnHome
+<LI><a href="#[8e]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FlashAllLEDs
 </UL>
 
 <P><STRONG><a name="[6e]"></a>SystemInit</STRONG> (Thumb, 36 bytes, Stack size 0 bytes, system_msp432e401y.o(.text.SystemInit))
@@ -994,7 +995,7 @@ Global Symbols
 <LI><a href="#[9b]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;VL53L1X_SensorInit
 </UL>
 
-<P><STRONG><a name="[81]"></a>main</STRONG> (Thumb, 1032 bytes, Stack size 32 bytes, 2dx_studio_8c.o(.text.main))
+<P><STRONG><a name="[81]"></a>main</STRONG> (Thumb, 1048 bytes, Stack size 32 bytes, 2dx_studio_8c.o(.text.main))
 <BR><BR>[Stack]<UL><LI>Max Depth = 152 + Unknown Stack Size
 <LI>Call Chain = main &rArr; __2sprintf &rArr; _printf_char_common &rArr; __printf
 </UL>
@@ -1019,6 +1020,7 @@ Global Symbols
 <LI><a href="#[93]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;VL53L1X_ClearInterrupt
 <LI><a href="#[9b]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;VL53L1X_SensorInit
 <LI><a href="#[a2]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;VL53L1_WaitMs
+<LI><a href="#[8f]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;SysTick_Wait10us
 <LI><a href="#[a8]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;SysTick_Wait10ms
 <LI><a href="#[a6]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;SysTick_Init
 <LI><a href="#[a5]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;PLL_Init
@@ -1026,7 +1028,7 @@ Global Symbols
 <BR>[Called By]<UL><LI><a href="#[80]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;__rt_entry_main
 </UL>
 
-<P><STRONG><a name="[ae]"></a>returnHome</STRONG> (Thumb, 248 bytes, Stack size 40 bytes, 2dx_studio_8c.o(.text.returnHome))
+<P><STRONG><a name="[ae]"></a>returnHome</STRONG> (Thumb, 272 bytes, Stack size 40 bytes, 2dx_studio_8c.o(.text.returnHome))
 <BR><BR>[Stack]<UL><LI>Max Depth = 72<LI>Call Chain = returnHome &rArr; __aeabi_d2iz
 </UL>
 <BR>[Calls]<UL><LI><a href="#[b4]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;__aeabi_i2d
@@ -1036,7 +1038,7 @@ Global Symbols
 <LI><a href="#[b5]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;__aeabi_dcmpgt
 <LI><a href="#[b1]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;__aeabi_dcmpeq
 <LI><a href="#[af]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;__aeabi_dsub
-<LI><a href="#[a8]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;SysTick_Wait10ms
+<LI><a href="#[8f]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;SysTick_Wait10us
 </UL>
 <BR>[Called By]<UL><LI><a href="#[81]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;main
 </UL>
