@@ -16,7 +16,7 @@ with serial.Serial('COM5', 115200, timeout=2) as s:
     scan_point_counts = []  # Track points per scan
 
     with open("tof_radar_scans.xyz", "w") as f:
-        for set_num in range(15):  # X scans
+        for set_num in range(3):  # X scans
             f.write(f"# Set {set_num}\n")  # Identifier for each scan
             angle = 0
             points = []
@@ -30,7 +30,7 @@ with serial.Serial('COM5', 115200, timeout=2) as s:
                         print("Waiting for valid data...")
                         time.sleep(0.1)  # Small delay before retrying
                         if length > 1:
-                            print(f"Not enough data in the given set, need exactly 32 points for a full scan ({length} points received)")
+                            print(f"Incorrect data amount in the given set, need exactly 32 points for a full scan ({length} points received)")
                         continue  # Keep waiting instead of skipping
 
                     print(f"Received Set #{set_num+1}: {line}")
@@ -108,3 +108,8 @@ ctr.set_up([0, 0, 1])  # Z-axis is up
 
 print("Showing connected 3D structure")
 vis.run()
+
+
+
+# Optional: Save the integrated point cloud
+# o3d.io.write_point_cloud("graphical_rep.pcd", pcd)
