@@ -59,6 +59,7 @@ uint16_t	dev = 0x29;			//address of the ToF sensor as an I2C slave peripheral
 uint32_t position = 0;
 int status=0;
 char aBuffer[1023]; // full buffer that will hold every distance on a single rotation
+int stopToSend = 0; // used for interrupting the running process when data acquisition button is pressed
 
 /////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////
@@ -137,17 +138,17 @@ void PortN_Init(void){ // Initialize Port N for onboard LED output (LED0, LED1)
 	SYSCTL_RCGCGPIO_R |= SYSCTL_RCGCGPIO_R12;				
 	while((SYSCTL_PRGPIO_R & SYSCTL_PRGPIO_R12) == 0){};	// Wait for clock to stabilize
 	// Configure PN0-PN1 as outputs for LED control
-	GPIO_PORTN_DIR_R |= 0x03;        							
+	GPIO_PORTN_DIR_R |= 0x23;        							
 	// Disable alternate functions on PN0-PN1 (configure as GPIO)
-	GPIO_PORTN_AFSEL_R &= ~0x03;     							
+	GPIO_PORTN_AFSEL_R &= ~0x23;     							
 	// Enable digital function on PN0-PN1
-	GPIO_PORTN_DEN_R |= 0x03;        							
+	GPIO_PORTN_DEN_R |= 0x23;        							
 	// Clear data on PN0-PN1 (turn off LEDs initially)
-	GPIO_PORTN_DATA_R &= ~0x03;										
+	GPIO_PORTN_DATA_R &= ~0x23;										
 	// turn on LED2 (PN1) initially 		
 	//GPIO_PORTN_DATA_R |= 0x01;
 	// Disable analog function on PN0-PN1
-	GPIO_PORTN_AMSEL_R &= ~0x03;     							
+	GPIO_PORTN_AMSEL_R &= ~0x23;     							
 	
 	return;
 }
@@ -278,8 +279,9 @@ int roundUp(double num) {
     int intPart = (int)num;  // Get the integer part of the dbl
     return (num > intPart) ? (intPart + 1) : intPart; // return the rounded up version
 }
-	
-void returnHome (){
+
+
+void returnHome (){ 
 	//return home is being displayed as active for troubleshooting
 	toggleLED(2);
 	
@@ -307,8 +309,6 @@ void returnHome (){
 	toggleLED(2);
 }
 
-
-
 //*********************************************************************************************************
 //*********************************************************************************************************
 //***********					MAIN Function				*****************************************************************
@@ -335,6 +335,18 @@ int main(void) {
 	PortN_Init(); // 2 LEDs used
 	PortF_Init(); // 1 LED used
 	PortJ_Init(); // buttons
+	
+	
+	//PWM
+	/*
+	while(1){
+		SysTick_Wait10ms(1);
+		GPIO_PORTN_DATA_R ^= 0x20; //100000, PN5
+	}
+	*/
+	
+	
+	
 
 	int running = 0;
 	
@@ -348,12 +360,17 @@ int main(void) {
 		}
 		
 		//PJ0, data acquisition
-		if (checkBtnPresses(0,0)) {
+		if (checkBtnPresses(0,0) || stopToSend) {
 			checkBtnPresses(0,1); // debounces
 			// send the UART for all readings
 			UART_printf(aBuffer);
 			//empty the buffer for the next runthrough
 			memset(aBuffer, 0, sizeof(aBuffer));
+			// stopToSend is true if we want to do data acquisition in the middle of a rotation
+			if (stopToSend){
+				stopToSend = 0;
+				//returnHome();
+			}
 			/*
 			NOTE: if i need to change this so its actually starting and stopping acquisition
 			all i need to do is make a boolean of isAcquiring for the sprintf concat lines, 
@@ -376,6 +393,7 @@ int main(void) {
 			while(sensorState==0){
 				status = VL53L1X_BootState(dev, &sensorState);
 				SysTick_Wait10ms(10);
+				FlashLED4(1); // booted indication, for debugging
 			}
 			FlashAllLEDs(); // booted indication, for debugging
 			//UART_printf("ToF Chip Booted!\r\n Please Wait...\r\n");
@@ -400,7 +418,7 @@ int main(void) {
 			while ((i < NUM_MEASUREMENTS) && (GPIO_PORTJ_DATA_R & 0x02) && (GPIO_PORTJ_DATA_R & 0x01)) {
 				
 				// 5 wait until the ToF sensor's data is ready
-				while (dataReady == 0){
+				while (dataReady == 0 && (GPIO_PORTJ_DATA_R & 0x02) && (GPIO_PORTJ_DATA_R & 0x01)){
 					status = VL53L1X_CheckForDataReady(dev, &dataReady);
 							//FlashLED3(1);
 							VL53L1_WaitMs(dev, 5);
@@ -450,8 +468,17 @@ int main(void) {
 			}
 			// debounces if necessary
 			checkBtnPresses(1,1);
+			
+			if ((GPIO_PORTJ_DATA_R & 0x01) == 0){
+				checkBtnPresses(0,1);
+				//we're not returning home here if we want data acquisition, since we need to send data then return
+				stopToSend = 1;
+			}
 			// return home here			
 			returnHome();
+			
+			
+			
 			/*
 			for(int j = 0; j < 64*8; j++) {//512
 					motorIteration(1);
