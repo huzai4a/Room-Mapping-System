@@ -1,7 +1,9 @@
 import numpy as np
 import open3d as o3d
 
-# Your raw data (converted to Python lists)
+# i took two sets of data for my scans and needed to combine them so i made this
+
+# raw data (converted to Python lists)
 data_pt1 = """
 # Set 0
 0 2637.0 0.0

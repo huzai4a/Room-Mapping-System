@@ -14,9 +14,10 @@ with serial.Serial('COM5', 115200, timeout=2) as s:
     x = 0
     all_points = []
     scan_point_counts = []  # Track points per scan
+    num_of_scans = 3  # Number of scans to perform
 
     with open("tof_radar_scans.xyz", "w") as f:
-        for set_num in range(3):  # X scans
+        for set_num in range(num_of_scans): # Number of scans
             f.write(f"# Set {set_num}\n")  # Identifier for each scan
             angle = 0
             points = []
@@ -58,58 +59,58 @@ with serial.Serial('COM5', 115200, timeout=2) as s:
             x += x_increment
             print(f"Scan {set_num+1} complete with {point_count} points")
 
-# Debugging
-print(f"Total points: {len(all_points)}")
-print(scan_point_counts)
-print(f"Avg points per scan: {np.mean(scan_point_counts)}")
+    # Debugging
+    print(f"Total points: {len(all_points)}")
+    # print(scan_point_counts)
+    # print(f"Avg points per scan: {np.mean(scan_point_counts)}")
 
-# Create line connections
-lines = []
-point_offset = 0
+    # Create line connections
+    lines = []
+    point_offset = 0
 
-for scan_idx in range(len(scan_point_counts)):
-    num_points = scan_point_counts[scan_idx]
-    
-    # Connect points within scan (ring)
-    for i in range(num_points - 1):
-        lines.append([point_offset + i, point_offset + i + 1])
-    lines.append([point_offset + num_points - 1, point_offset])  # Close ring
-    
-    # Connect to next scan (if exists)
-    if scan_idx < len(scan_point_counts) - 1:
-        next_scan_offset = point_offset + num_points
-        next_scan_points = scan_point_counts[scan_idx + 1]
+    for scan_idx in range(len(scan_point_counts)):
+        num_points = scan_point_counts[scan_idx]
         
-        # Connect corresponding points (simplified - assumes equal point counts)
-        for i in range(min(num_points, next_scan_points)):
-            lines.append([point_offset + i, next_scan_offset + i])
-    
-    point_offset += num_points
+        # Connect points within scan (ring)
+        for i in range(num_points - 1):
+            lines.append([point_offset + i, point_offset + i + 1])
+        lines.append([point_offset + num_points - 1, point_offset])  # Close ring
+        
+        # Connect to next scan (if exists)
+        if scan_idx < len(scan_point_counts) - 1:
+            next_scan_offset = point_offset + num_points
+            next_scan_points = scan_point_counts[scan_idx + 1]
+            
+            # Connect corresponding points (simplified - assumes equal point counts)
+            for i in range(min(num_points, next_scan_points)):
+                lines.append([point_offset + i, next_scan_offset + i])
+        
+        point_offset += num_points
 
-# Create combined visualization
-combined_pcd = o3d.geometry.PointCloud()
-combined_pcd.points = o3d.utility.Vector3dVector(np.array(all_points))
+    # Create combined visualization
+    combined_pcd = o3d.geometry.PointCloud()
+    combined_pcd.points = o3d.utility.Vector3dVector(np.array(all_points))
 
-line_set = o3d.geometry.LineSet(
-    points=o3d.utility.Vector3dVector(all_points),
-    lines=o3d.utility.Vector2iVector(lines)
-)
+    line_set = o3d.geometry.LineSet(
+        points=o3d.utility.Vector3dVector(all_points),
+        lines=o3d.utility.Vector2iVector(lines)
+    )
 
-# Custom visualization
-vis = o3d.visualization.Visualizer()
-vis.create_window()
-vis.add_geometry(combined_pcd)
-vis.add_geometry(line_set)
+    # Custom visualization
+    vis = o3d.visualization.Visualizer()
+    vis.create_window()
+    vis.add_geometry(combined_pcd)
+    vis.add_geometry(line_set)
 
-# Set better viewing angle
-ctr = vis.get_view_control()
-ctr.set_front([0, -1, 0])  # Looking along the depth axis
-ctr.set_up([0, 0, 1])  # Z-axis is up
+    # Set better viewing angle
+    ctr = vis.get_view_control()
+    ctr.set_front([0, -1, 0])  # Looking along the depth axis
+    ctr.set_up([0, 0, 1])  # Z-axis is up
 
-print("Showing connected 3D structure")
-vis.run()
+    print("Showing connected 3D structure")
+    vis.run()
 
 
 
-# Optional: Save the integrated point cloud
-# o3d.io.write_point_cloud("graphical_rep.pcd", pcd)
+    # Optional: Save the integrated point cloud
+    # o3d.io.write_point_cloud("graphical_rep.pcd", pcd)
