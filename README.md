@@ -1,5 +1,5 @@
 <div align="center">
-<h3 align="center">Room Mapping System</h3>
+<h1 align="center">Room Mapping System</h1>
 
   <p align="center">
     A microcontroller-based system that maps a room using a time-of-flight sensor and a stepper motor.
