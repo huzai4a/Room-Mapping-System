@@ -3,7 +3,6 @@
 ".\objects\systick.o"
 ".\objects\vl53l1_platform_2dx4.o"
 ".\objects\vl53l1x_api.o"
-".\objects\onboardleds.o"
 ".\objects\uart.o"
 ".\objects\2dx_studio_8c.o"
 ".\objects\startup_msp432e401y_uvision.o"

@@ -405,11 +405,6 @@
               <FilePath>.\VL53L1X_api.c</FilePath>
             </File>
             <File>
-              <FileName>onboardLEDs.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>.\onboardLEDs.c</FilePath>
-            </File>
-            <File>
               <FileName>uart.c</FileName>
               <FileType>1</FileType>
               <FilePath>.\uart.c</FilePath>

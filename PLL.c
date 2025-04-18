@@ -28,26 +28,6 @@
 
 // The #define statement PSYSDIV in PLL.h
 // initializes the PLL to the desired frequency.
-/*
-WANT: SYSCLK = 14 MHz
-SYSCLK = fVCO / (PSYSDIV + 1), fVCO = (fXTAL/(Q + 1)/(N + 1))*(MINT + (MFRAC/1,024)),
-So SYSCLK = ((fXTAL/(Q + 1)/(N + 1))*(MINT + (MFRAC/1,024))) / (PSYSDIV + 1)
-where we know as default, 
-PSYSDIV = 3
-fXTAL = 25000000,
-MINT = 96,
-MFRAC = 0
-
-If I need SYSCLK = 14 MHz, I can change Q & N accordingly by solving:
-14000000 = ((25000000/(Q + 1)/(N + 1))*(96 + (0/1,024))) / (3 + 1)
-For simplicity, Q = 0:
-14000000 = ((25000000/(1)/(N + 1))*(96)) / (4)
-N ~ 42
-
-bus freq = ((fpiosc / ((Q+1)(N+1))) * MINT) / (PSYSDIV + 1)
-MINT = 
-ORIGINAL: bus frequency is 480MHz/(PSYSDIV+1) = 480MHz/(3+1) = 120 MHz
-*/
 
 // IMPORTANT: See Step 6) of PLL_Init().  If you change something, change 480 MHz.
 // see the table at the end of this file

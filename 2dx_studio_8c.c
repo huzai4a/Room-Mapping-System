@@ -1,10 +1,11 @@
-/*  Time of Flight for 2DX4 -- Studio W8-0
+/*  Time of Flight for 2DX4 -- Project
                 Code written to support data collection from VL53L1X using the Ultra Light Driver.
                 I2C methods written based upon MSP432E4 Reference Manual Chapter 19.
                 Specific implementation was based upon format specified in VL53L1X.pdf pg19-21
                 Code organized according to en.STSW-IMG009\Example\Src\main.c
                 
                 The VL53L1X is run with default firmware settings.
+								Code was built ontop of Studio 8 code to create a functional room scanner.
 
 
             Written by Tom Doyle
@@ -19,13 +20,16 @@
 						Modified March 16, 2023 
 						by T. Doyle
 							- minor modifications made to make compatible with new Keil IDE
+							
+						Modified April 01, 2025 
+						by Huzaifa Syed
+							- Modified ToF Sensor Studio to be able to scan rooms
 
 */
 #include <stdint.h>
 #include "PLL.h"
 #include "SysTick.h"
 #include "uart.h"
-#include "onboardLEDs.h"
 #include "tm4c1294ncpdt.h"
 #include "VL53L1X_api.h"
 
@@ -49,17 +53,16 @@
 /////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////
 
-#define NUM_MEASUREMENTS 32
+#define NUM_MEASUREMENTS 32 // this controls the number of measurements taken per rotation
 
 // note: for degrees we consider cw positive and ccw negative i.e. homeDeg = -45 -> 45 deg CCW
-//home should be 0, or the ToF wires will get tangled
+//home should be 0 for this project, or the ToF wires will get tangled
 double homeDeg = 0; // sets the point at which to return. i.e. 45 means 45 cw from the direction the motor starts
 double currDeg = 0; //variable to store our relative position to the starting point
 uint16_t	dev = 0x29;			//address of the ToF sensor as an I2C slave peripheral
-uint32_t position = 0;
+//uint32_t position = 0;
 int status=0;
-char aBuffer[1023]; // full buffer that will hold every distance on a single rotation
-int stopToSend = 0; // used for interrupting the running process when data acquisition button is pressed
+char fullBuffer[1023]; // full buffer that will hold every distance on a single rotation
 
 /////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////
@@ -96,7 +99,6 @@ void I2C_Init(void){
 void VL53L1X_XSHUT(void){
     GPIO_PORTG_DIR_R |= 0x01;                                        // make PG0 out
     GPIO_PORTG_DATA_R &= 0b11111110;                                 //PG0 = 0
-    FlashAllLEDs();
     SysTick_Wait10ms(10);
     GPIO_PORTG_DIR_R &= ~0x01;                                            // make PG0 input (HiZ)
     
@@ -144,9 +146,7 @@ void PortN_Init(void){ // Initialize Port N for onboard LED output (LED0, LED1)
 	// Enable digital function on PN0-PN1
 	GPIO_PORTN_DEN_R |= 0x23;        							
 	// Clear data on PN0-PN1 (turn off LEDs initially)
-	GPIO_PORTN_DATA_R &= ~0x23;										
-	// turn on LED2 (PN1) initially 		
-	//GPIO_PORTN_DATA_R |= 0x01;
+	GPIO_PORTN_DATA_R &= ~0x23;					
 	// Disable analog function on PN0-PN1
 	GPIO_PORTN_AMSEL_R &= ~0x23;     							
 	
@@ -165,8 +165,6 @@ void PortF_Init(void){ // Initialize Port F for onboard LED output (LED2, LED3)
 	GPIO_PORTF_DEN_R |= 0x11;        							
 	// Clear data on PF0,PF4 (turn off LEDs initially)
 	GPIO_PORTF_DATA_R &= ~0x11;
-	// LED2 on initially (PF4)
-	//GPIO_PORTF_DATA_R |= 0x10;
 	// Disable analog function on PF0,PF4
 	GPIO_PORTF_AMSEL_R &= ~0x11;     							
 	
@@ -195,12 +193,17 @@ void PortJ_Init(void){ // Initialize Port J for onboard switches
 
 
 
-// past inits //////////////////////////////////////////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 
-
-
-
+void FlashAllLEDs(){ //for debugging, used to indicate startup of running after booting ToF
+		GPIO_PORTN_DATA_R ^= 0b00000011; 								
+		GPIO_PORTF_DATA_R ^= 0b00010001; 									
+		SysTick_Wait10us(25);														//250us delay
+		GPIO_PORTN_DATA_R ^= 0b00000011;			
+		GPIO_PORTF_DATA_R ^= 0b00010001; 									
+		SysTick_Wait10us(25);														//250us delay			
+}
 
 // can toggle any onboard led
 void toggleLED (int num){
@@ -214,7 +217,7 @@ void toggleLED (int num){
 		case 2: //PF4 - Troubleshooting, used for blinking the LED every 11.25 degrees
 			GPIO_PORTF_DATA_R ^= 0x10;
 			break;
-		case 3: //PF0 - N/A
+		case 3: //PF0 - N/A, some debugging
 			GPIO_PORTF_DATA_R ^= 0x01;
 			break;
 	}
@@ -252,25 +255,25 @@ int checkBtnPresses(int btnNum, int debounce){
 
 
 void motorIteration(int direction){
-	int delay = 200; // each wait call is 10ms, making this delay (10*delay) ms, this is global for testing
+	int delay = 200; // each wait call is 10us, making this delay (10*delay) us, 2ms works well
 	
 	if (direction == 0){ //CW
 		GPIO_PORTH_DATA_R = 0b0011;
-		SysTick_Wait10us(delay);											// What if we want to reduce the delay between steps to be less than 10 ms?
-		GPIO_PORTH_DATA_R = 0b0110;													// Complete the missing code.
+		SysTick_Wait10us(delay);											
+		GPIO_PORTH_DATA_R = 0b0110;													
 		SysTick_Wait10us(delay);
-		GPIO_PORTH_DATA_R = 0b1100;													// Complete the missing code.
+		GPIO_PORTH_DATA_R = 0b1100;													
 		SysTick_Wait10us(delay);
-		GPIO_PORTH_DATA_R = 0b1001;													// Complete the missing code.
+		GPIO_PORTH_DATA_R = 0b1001;													
 		SysTick_Wait10us(delay);
 	} else { //CCW
 		GPIO_PORTH_DATA_R = 0b1001;
-		SysTick_Wait10us(delay);											// What if we want to reduce the delay between steps to be less than 10 ms?
-		GPIO_PORTH_DATA_R = 0b1100;													// Complete the missing code.
+		SysTick_Wait10us(delay);											
+		GPIO_PORTH_DATA_R = 0b1100;													
 		SysTick_Wait10us(delay);
-		GPIO_PORTH_DATA_R = 0b0110;													// Complete the missing code.
+		GPIO_PORTH_DATA_R = 0b0110;													
 		SysTick_Wait10us(delay);
-		GPIO_PORTH_DATA_R = 0b0011;													// Complete the missing code.
+		GPIO_PORTH_DATA_R = 0b0011;													
 		SysTick_Wait10us(delay);
 	}
 }
@@ -282,13 +285,13 @@ int roundUp(double num) {
 
 
 void returnHome (){ 
-	//return home is being displayed as active for troubleshooting
+	//return home is being displayed as active for troubleshooting LED
 	toggleLED(2);
 	
 	int numIterations;
 	//how far we need to travel home (must be +ve)
 	double degDiff = currDeg - homeDeg;
-	degDiff = degDiff < 0 ? degDiff*-1 : degDiff;
+	degDiff = degDiff < 0 ? degDiff*-1 : degDiff; // absolute value
 	
 	if (degDiff >= 360 || degDiff <= 0){ // prevents tangling of ToF
 		numIterations = 512; // full rotation
@@ -299,13 +302,14 @@ void returnHome (){
 		numIterations = roundUp(degDiff); 
 	}
 	
-	// you need to go CCW
-	//move ccw til home
+	// you need to go CCW to untangle, move ccw til home
 	for(int i = 0; i < numIterations; i++){												
 		motorIteration(1);
 	}
 	
+	// resets currDeg since we're now at home
 	currDeg = homeDeg;
+	//return home rotation finished, troubleshooting LED off
 	toggleLED(2);
 }
 
@@ -316,8 +320,7 @@ void returnHome (){
 //*********************************************************************************************************
 
 int main(void) {
-  uint8_t byteData, sensorState=0, myByteArray[10] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF} , i=0;
-  uint16_t wordData;
+  uint8_t sensorState=0;
   uint16_t Distance;
   uint16_t SignalRate;
   uint16_t AmbientRate;
@@ -328,7 +331,6 @@ int main(void) {
 	//initialize
 	PLL_Init();	
 	SysTick_Init();
-	//onboardLEDs_Init();
 	I2C_Init();
 	UART_Init();
 	PortH_Init(); // Motor used
@@ -337,7 +339,7 @@ int main(void) {
 	PortJ_Init(); // buttons
 	
 	
-	//PWM
+	//PWM check, uncomment and attach oscilliscope
 	/*
 	while(1){
 		SysTick_Wait10ms(1);
@@ -346,57 +348,66 @@ int main(void) {
 	*/
 	
 	
-	
+	SysTick_Wait10ms(100); // give time for inits to work out, prevents immediate unexpected behaviour
+	int stopToSend = 0; // used for interrupting the running process when data acquisition button is pressed
+	int running = 0; // used to keep track of motor active state 
 
-	int running = 0;
+
 	
 	while (1){
 		//PJ1, motor rotation
 		if (checkBtnPresses(1,0)) {
 			checkBtnPresses(1,1); // debounces
 			running = 1;
-		} else{
-			running = 0;
+		} else {
+			running = 0; //not pressed, running 0
 		}
 		
 		//PJ0, data acquisition
 		if (checkBtnPresses(0,0) || stopToSend) {
 			checkBtnPresses(0,1); // debounces
 			// send the UART for all readings
-			UART_printf(aBuffer);
+			UART_printf(fullBuffer);
 			//empty the buffer for the next runthrough
-			memset(aBuffer, 0, sizeof(aBuffer));
+			memset(fullBuffer, 0, sizeof(fullBuffer));
 			// stopToSend is true if we want to do data acquisition in the middle of a rotation
+			// (data btnpressed mid rotation)
 			if (stopToSend){
 				stopToSend = 0;
-				//returnHome();
 			}
 			/*
 			NOTE: if i need to change this so its actually starting and stopping acquisition
 			all i need to do is make a boolean of isAcquiring for the sprintf concat lines, 
-			while also making sure to count the number of steps, sending the uart when the count gets to 32
+			while also making sure to count the number of steps, sending the uart when the count gets to 32.
+			This would be extremely impractical since you'd then have to time your scan presses so I implemented
+			what I felt made sense.
+			
+			NOTE: The buttons being pressed during rotation may also not register if the code is still under a 
+			wait call, which would conflict with the code execution
 			*/
+			
+			// UART transmission indicator
 			toggleLED(0);
 			SysTick_Wait10ms(1);
 			toggleLED(0);
-			//FlashLED1(1); // transmission indicator
-			//add transmit
 		}
 		
 		// start rotation and measurement
-		if (running){
+		if (running == 1){
 			char temp[10]; // Temporary buffer to store a single distance value before concat
 
-			
 			
 			// 1 Wait for device booted
 			while(sensorState==0){
 				status = VL53L1X_BootState(dev, &sensorState);
 				SysTick_Wait10ms(10);
-				FlashLED4(1); // booted indication, for debugging
+				// debugging 'stuck here' indicator
+				//toggleLED(3);
+				//SysTick_Wait10ms(1);
+				//toggleLED(3);
 			}
-			FlashAllLEDs(); // booted indication, for debugging
-			//UART_printf("ToF Chip Booted!\r\n Please Wait...\r\n");
+			
+			//FlashAllLEDs(); // booted indication, for debugging
 
 			status = VL53L1X_ClearInterrupt(dev); /* clear interrupt has to be called to enable next interrupt*/
 
@@ -413,15 +424,15 @@ int main(void) {
 			// 4 What is missing -- refer to API flow chart
 			status = VL53L1X_StartRanging(dev);	   // This function has to be called to enable the ranging
 
-			// Get the Distance Measures 8 times / 32 times
+			// Get the Distance Measures NUM_MEASUREMENTS times
 			int i = 0;
+			//while not enough measurements & buttons not pressed yet
 			while ((i < NUM_MEASUREMENTS) && (GPIO_PORTJ_DATA_R & 0x02) && (GPIO_PORTJ_DATA_R & 0x01)) {
 				
 				// 5 wait until the ToF sensor's data is ready
 				while (dataReady == 0 && (GPIO_PORTJ_DATA_R & 0x02) && (GPIO_PORTJ_DATA_R & 0x01)){
 					status = VL53L1X_CheckForDataReady(dev, &dataReady);
-							//FlashLED3(1);
-							VL53L1_WaitMs(dev, 5);
+					VL53L1_WaitMs(dev, 5);
 				}
 				dataReady = 0;
 				
@@ -432,35 +443,37 @@ int main(void) {
 				status = VL53L1X_GetAmbientRate(dev, &AmbientRate);
 				status = VL53L1X_GetSpadNb(dev, &SpadNum);
 				
+				// flash PN0 for measurement status indication
 				toggleLED(1);
 				SysTick_Wait10ms(1);
 				toggleLED(1);
-				//FlashLED2(1); // flash PN0 for measurement status indication
 
 				status = VL53L1X_ClearInterrupt(dev);	 /* 8 clear interrupt has to be called to enable next interrupt*/
 				
+				//FOR TESTING:
 				// print the resulted readings to UART
 				//sprintf(printf_buffer,"%u, %u, %u, %u, %u\r\n", RangeStatus, Distance, SignalRate, AmbientRate,SpadNum);
 				// print the resulted readings to UART immediately
 				//sprintf(printf_buffer, "%u\r\n", Distance);
 				//UART_printf(printf_buffer);
 				
-				// accumulate all readings to distBuffer
+				// accumulate all readings to fullBuffer
 				sprintf(temp, "%u ", Distance); // Format as a string
-				strcat(aBuffer, temp); // Append to main buffer
+				strcat(fullBuffer, temp); // Append to main buffer
 				
 				
 				SysTick_Wait10ms(20);
 				
 				int j = 0;
 				// 45 deg -> 64 (8 measures), 11.25 deg -> 16 (32 measures) 
+				// while not enough rotations & buttons not pressed yet
 				while(j < 512/NUM_MEASUREMENTS && (GPIO_PORTJ_DATA_R & 0x02) && (GPIO_PORTJ_DATA_R & 0x01)) {
 					motorIteration(0);
-					position++;	
+					//position++;	
 					j++;
 					currDeg += 0.703125; // how much distance was covered in the previous 8 lines of code (CW)
 					if (currDeg >= 360){
-						currDeg -=360;
+						currDeg = 0;
 					}
 				}
 				
@@ -471,20 +484,10 @@ int main(void) {
 			
 			if ((GPIO_PORTJ_DATA_R & 0x01) == 0){
 				checkBtnPresses(0,1);
-				//we're not returning home here if we want data acquisition, since we need to send data then return
 				stopToSend = 1;
 			}
 			// return home here			
 			returnHome();
-			
-			
-			
-			/*
-			for(int j = 0; j < 64*8; j++) {//512
-					motorIteration(1);
-					position--;
-			}
-			*/
 			
 			VL53L1X_StopRanging(dev);				
 			running = 0; // finished this run
