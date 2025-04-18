@@ -1,3 +1,22 @@
 # Ignore virtual environment and environment files
 py/.venv/
 py/venv/
+
+
+# Keil build files
+*.o
+*.d
+*.crf
+*.lst
+*.map
+*.bak
+
+# Output folders
+/Objects/
+/Listings/
+
+# Keil user-specific files
+*.uvguix.*
+
+# Mac system files
+.DS_Store
