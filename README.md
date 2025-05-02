@@ -39,7 +39,7 @@
 
 ## About The Project
 
-The Room Mapping System is an embedded project designed to scan and map the surroundings of a room. It uses a VL53L1X time-of-flight sensor interfaced with a TM4C1294NCPDT microcontroller to measure distances. A stepper motor rotates the sensor, allowing it to capture distance measurements at various angles, effectively creating a 2D "radar" scan of the room. The collected data is then transmitted via UART to a computer for processing and visualization using Python.
+The Room Mapping System is an embedded project designed to scan and map the surroundings of a room. It uses a VL53L1X time-of-flight sensor interfaced with a MSP432E401Y microcontroller to measure distances. A stepper motor rotates the sensor, allowing it to capture distance measurements at various angles, effectively creating a 2D "radar" scan of the room. The collected data is then transmitted via UART to a computer for processing and visualization using Python.
 
 ### Key Features
 
