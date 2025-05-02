@@ -56,7 +56,7 @@ The Room Mapping System is an embedded project designed to scan and map the surr
 *   [C](https://en.wikipedia.org/wiki/C_(programming_language))
 *   [Python](https://www.python.org/)
 *   [Keil uVision IDE](https://www.keil.com/product/uvision/)
-*   [Texas Instruments TM4C1294NCPDT Microcontroller](https://www.ti.com/product/MSP432E401Y)
+*   [Texas Instruments MSP432E401Y Microcontroller](https://www.ti.com/product/MSP432E401Y)
 *   [VL53L1X Time-of-Flight Sensor](https://www.st.com/en/imaging-and-photonics-solutions/vl53l1x.html)
 *   [Open3D](http://www.open3d.org/)
 
@@ -127,7 +127,7 @@ To get a local copy up and running, follow these steps.
     *   Open the `2dx_studio_8c.uvprojx` project in Keil uVision.
     *   Translate/Build the project to generate the executable.
 3.  **Flash the microcontroller:**
-    *   Connect the TM4C1294NCPDT microcontroller to your computer using a JTAG debugger.
+    *   Connect the MSP432E401Y microcontroller to your computer using a JTAG debugger.
     *   Flash the generated executable to the microcontroller using Keil uVision.
     <p align="left">
             <img src="https://github.com/user-attachments/assets/1bf9b42f-b2d2-43fe-8339-37d802d539ac" width="450"/>
